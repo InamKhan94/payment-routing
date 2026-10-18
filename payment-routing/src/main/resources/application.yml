@@ -1,0 +1,24 @@
+server:
+  port: 8083
+
+
+payment-routing:
+    branches:
+      A:
+        cost: 5
+        destinations: [B,C]
+      B:
+        cost: 50
+        destinations: [D]
+      C:
+        cost: 10
+        destinations: [B,E]
+      D:
+        cost: 10
+        destinations: [E,F]
+      E:
+        cost: 20
+        destinations: [D,F]
+      F:
+        cost: 5
+        destinations: []
