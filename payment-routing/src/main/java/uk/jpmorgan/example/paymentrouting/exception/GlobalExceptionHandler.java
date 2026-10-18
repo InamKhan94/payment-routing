@@ -1,5 +1,6 @@
 package uk.jpmorgan.example.paymentrouting.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
@@ -10,7 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
+
+import java.net.URI;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -18,23 +20,37 @@ public class GlobalExceptionHandler {
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler({
-            ConstraintViolationException.class,
-            HandlerMethodValidationException.class,
-            MissingServletRequestParameterException.class
-    })
-    public ResponseEntity<ProblemDetail> handleValidationException(
-            Exception exception) {
+    @RestControllerAdvice
+    public class ApiExceptionHandler {
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Invalid request. Please provide valid origin and destination branches."
-        );
+        @ExceptionHandler(RouteNotFoundException.class)
+        public ProblemDetail handleRouteNotFound(
+                RouteNotFoundException exception,
+                HttpServletRequest request) {
 
-        problem.setTitle("Validation Failed");
+            return createProblem(
+                    HttpStatus.NOT_FOUND,
+                    "Route Not Found",
+                    exception.getMessage(),
+                    request
+            );
+        }
 
-        return ResponseEntity.badRequest().body(problem);
-    }
+        @ExceptionHandler({
+                ConstraintViolationException.class,
+                MissingServletRequestParameterException.class
+        })
+        public ProblemDetail handleValidation(
+                Exception exception,
+                HttpServletRequest request) {
+
+            return createProblem(
+                    HttpStatus.BAD_REQUEST,
+                    "Validation Failed",
+                    "Invalid request. Please provide valid origin and destination branches.",
+                    request
+            );
+        }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> handleIllegalArgumentException(
@@ -68,5 +84,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(problem);
+    }
+
+        private ProblemDetail createProblem(
+                HttpStatus status,
+                String title,
+                String detail,
+                HttpServletRequest request) {
+
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                    status, detail);
+
+            problem.setTitle(title);
+            problem.setInstance(URI.create(request.getRequestURI()));
+
+            return problem;
+        }
     }
 }

@@ -10,7 +10,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -39,7 +38,7 @@ class PaymentControllerTest {
     }
 
     @Test
-    void shouldReturnNotFoundWhenRouteDoesNotExist()
+    void shouldReturnNotFoundWithProblemDetailWhenRouteDoesNotExist()
             throws Exception {
 
         when(paymentService.processPayment("F", "A"))
@@ -48,35 +47,50 @@ class PaymentControllerTest {
         mockMvc.perform(get("/payments/route")
                         .param("origin", "F")
                         .param("destination", "A"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(
+                        "application/problem+json"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.title").value("Route Not Found"))
+                .andExpect(jsonPath("$.detail").value(
+                        "No valid payment route exists for the supplied origin and destination branches."))
+                .andExpect(jsonPath("$.instance").value("/payments/route"));
 
         verify(paymentService).processPayment("F", "A");
     }
 
     @Test
-    void shouldReturnBadRequestWhenOriginIsBlank()
+    void shouldReturnBadRequestWithProblemDetailWhenOriginIsBlank()
             throws Exception {
 
         mockMvc.perform(get("/payments/route")
                         .param("origin", "")
                         .param("destination", "D"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Validation Failed"))
+                .andExpect(jsonPath("$.detail").value(
+                        "Invalid request. Please provide valid origin and destination branches."))
+                .andExpect(jsonPath("$.instance").value("/payments/route"));
 
-        verify(paymentService, never())
-                .processPayment("", "D");
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    void shouldReturnBadRequestWhenDestinationIsBlank()
+    void shouldReturnBadRequestWithProblemDetailWhenDestinationIsBlank()
             throws Exception {
 
         mockMvc.perform(get("/payments/route")
                         .param("origin", "A")
                         .param("destination", " "))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Validation Failed"))
+                .andExpect(jsonPath("$.detail").value(
+                        "Invalid request. Please provide valid origin and destination branches."))
+                .andExpect(jsonPath("$.instance").value("/payments/route"));
 
-        verify(paymentService, never())
-                .processPayment("A", " ");
+        verifyNoInteractions(paymentService);
     }
 
     @Test
