@@ -1,6 +1,5 @@
 package uk.jpmorgan.example.paymentrouting.controller;
 
-import uk.jpmorgan.example.paymentrouting.domain.PaymentRoute;
 import uk.jpmorgan.example.paymentrouting.service.PaymentService;
 
 import org.junit.jupiter.api.Test;
@@ -9,12 +8,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-import java.util.Optional;
-
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -29,21 +26,14 @@ class PaymentControllerTest {
 
     @Test
     void shouldReturnCheapestRoute() throws Exception {
-        PaymentRoute route =
-                new PaymentRoute(List.of("A", "C", "E", "D"), 35);
-
         when(paymentService.processPayment("A", "D"))
-                .thenReturn(Optional.of(route));
+                .thenReturn("A,C,E,D");
 
         mockMvc.perform(get("/payments/route")
                         .param("origin", "A")
                         .param("destination", "D"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.path[0]").value("A"))
-                .andExpect(jsonPath("$.path[1]").value("C"))
-                .andExpect(jsonPath("$.path[2]").value("E"))
-                .andExpect(jsonPath("$.path[3]").value("D"))
-                .andExpect(jsonPath("$.totalCost").value(35));
+                .andExpect(content().string("A,C,E,D"));
 
         verify(paymentService).processPayment("A", "D");
     }
@@ -53,7 +43,7 @@ class PaymentControllerTest {
             throws Exception {
 
         when(paymentService.processPayment("F", "A"))
-                .thenReturn(Optional.empty());
+                .thenReturn(null);
 
         mockMvc.perform(get("/payments/route")
                         .param("origin", "F")
@@ -113,23 +103,15 @@ class PaymentControllerTest {
 
     @Test
     void shouldReturnSameBranchRoute() throws Exception {
-        PaymentRoute route =
-                new PaymentRoute(List.of("A"), 0);
-
         when(paymentService.processPayment("A", "A"))
-                .thenReturn(Optional.of(route));
+                .thenReturn("A");
 
         mockMvc.perform(get("/payments/route")
                         .param("origin", "A")
                         .param("destination", "A"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.path").isArray())
-                .andExpect(jsonPath("$.path.length()").value(1))
-                .andExpect(jsonPath("$.path[0]").value("A"))
-                .andExpect(jsonPath("$.totalCost").value(0));
-    }
+                .andExpect(content().string("A"));
 
-    private void verifyNoInteractions(PaymentService service) {
-        org.mockito.Mockito.verifyNoInteractions(service);
+        verify(paymentService).processPayment("A", "A");
     }
 }

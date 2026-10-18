@@ -1,19 +1,17 @@
-package uk.jpmorgan.example.paymentrouting.service.impl;
+ package uk.jpmorgan.example.paymentrouting.service.impl;
 
 import uk.jpmorgan.example.paymentrouting.config.PaymentRoutingProperties;
 import uk.jpmorgan.example.paymentrouting.domain.BranchConfig;
 import uk.jpmorgan.example.paymentrouting.domain.State;
 import uk.jpmorgan.example.paymentrouting.service.PaymentService;
 import org.springframework.stereotype.Service;
-import uk.jpmorgan.example.paymentrouting.domain.PaymentRoute;
 
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.PriorityQueue;
+import java.util.stream.Collectors;
 
 @Service
 public class DijkstraPaymentService implements PaymentService {
@@ -25,13 +23,10 @@ public class DijkstraPaymentService implements PaymentService {
     }
 
     @Override
-    public Optional<PaymentRoute> processPayment(
-            String originBranch,
-            String destinationBranch) {
+    public String processPayment(String originBranch, String destinationBranch) {
 
         if (originBranch == null || originBranch.isBlank() || destinationBranch == null || destinationBranch.isBlank()) {
-            throw new IllegalArgumentException("Origin and destination must not be blank."
-            );
+            throw new IllegalArgumentException("Origin and destination must not be blank.");
         }
 
         Map<String, BranchConfig> graph = properties.getBranches();
@@ -44,11 +39,11 @@ public class DijkstraPaymentService implements PaymentService {
         String target = destinationBranch.toUpperCase(Locale.ROOT);
 
         if (!graph.containsKey(source) || !graph.containsKey(target)) {
-            return Optional.empty();
+            return null;
         }
 
         if (source.equals(target)) {
-            return Optional.of(new PaymentRoute(List.of(source), 0));
+            return source;
         }
 
         Map<String, Integer> distance = new HashMap<>();
@@ -75,28 +70,34 @@ public class DijkstraPaymentService implements PaymentService {
             BranchConfig config = graph.get(current.branch());
 
             if (config == null || config.destinations() == null) {
-                throw new IllegalStateException("Invalid routing configuration for branch: " + current.branch()
-                );
+                throw new IllegalStateException(
+                        "Invalid routing configuration for branch: "
+                                + current.branch());
             }
 
             int edgeCost = config.cost();
 
             if (edgeCost < 0) {
-                throw new IllegalStateException("Negative routing cost for branch: " + current.branch()
-                );
+                throw new IllegalStateException(
+                        "Negative routing cost for branch: "
+                                + current.branch());
             }
 
             for (String next : config.destinations()) {
                 if (next == null || !distance.containsKey(next)) {
-                    throw new IllegalStateException("Unknown destination branch: " + next);
+                    throw new IllegalStateException(
+                            "Unknown destination branch: " + next);
                 }
 
                 final int newDistance;
 
                 try {
-                    newDistance = Math.addExact(current.totalCost(), edgeCost);
+                    newDistance = Math.addExact(
+                            current.totalCost(), edgeCost);
                 } catch (ArithmeticException exception) {
-                    throw new IllegalStateException("Payment route cost overflow detected.", exception);
+                    throw new IllegalStateException(
+                            "Payment route cost overflow detected.",
+                            exception);
                 }
 
                 if (newDistance < distance.get(next)) {
@@ -108,7 +109,7 @@ public class DijkstraPaymentService implements PaymentService {
         }
 
         if (distance.get(target) == Integer.MAX_VALUE) {
-            return Optional.empty();
+            return null;
         }
 
         LinkedList<String> path = new LinkedList<>();
@@ -119,7 +120,7 @@ public class DijkstraPaymentService implements PaymentService {
             current = previous.get(current);
         }
 
-        return Optional.of(new PaymentRoute(path, distance.get(target))
-        );
+        return path.stream()
+                .collect(Collectors.joining(","));
     }
 }

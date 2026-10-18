@@ -1,9 +1,5 @@
 package uk.jpmorgan.example.paymentrouting.service;
 
-import uk.jpmorgan.example.paymentrouting.domain.PaymentRoute;
-
-import java.util.Optional;
-
 public interface PaymentService {
     /**
      * Processes a payment by finding the optimal route between the origin
@@ -12,10 +8,9 @@ public interface PaymentService {
      *
      * @param originBranch      the branch where the payment originates
      * @param destinationBranch the branch where the payment is destined
-     * @return an Optional containing the optimal PaymentRoute if a valid
-     *         route exists; otherwise, {@link Optional#empty()}
+     *
      */
-    Optional<PaymentRoute> processPayment(
+    String processPayment(
             String originBranch,
             String destinationBranch
     );
