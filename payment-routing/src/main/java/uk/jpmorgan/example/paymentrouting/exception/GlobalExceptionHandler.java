@@ -20,85 +20,90 @@ public class GlobalExceptionHandler {
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @RestControllerAdvice
-    public class ApiExceptionHandler {
+    @ExceptionHandler(RouteNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleRouteNotFound(
+            RouteNotFoundException exception,
+            HttpServletRequest request) {
 
-        @ExceptionHandler(RouteNotFoundException.class)
-        public ProblemDetail handleRouteNotFound(
-                RouteNotFoundException exception,
-                HttpServletRequest request) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.NOT_FOUND,
+                "Route Not Found",
+                exception.getMessage(),
+                request
+        );
 
-            return createProblem(
-                    HttpStatus.NOT_FOUND,
-                    "Route Not Found",
-                    exception.getMessage(),
-                    request
-            );
-        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
 
-        @ExceptionHandler({
-                ConstraintViolationException.class,
-                MissingServletRequestParameterException.class
-        })
-        public ProblemDetail handleValidation(
-                Exception exception,
-                HttpServletRequest request) {
+    @ExceptionHandler({
+            ConstraintViolationException.class,
+            MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ProblemDetail> handleValidation(
+            Exception exception,
+            HttpServletRequest request) {
 
-            return createProblem(
-                    HttpStatus.BAD_REQUEST,
-                    "Validation Failed",
-                    "Invalid request. Please provide valid origin and destination branches.",
-                    request
-            );
-        }
+        ProblemDetail problem = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Validation Failed",
+                "Invalid request. Please provide valid origin and destination branches.",
+                request
+        );
+
+        return ResponseEntity.badRequest().body(problem);
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> handleIllegalArgumentException(
-            IllegalArgumentException exception) {
+            IllegalArgumentException exception,
+            HttpServletRequest request) {
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        ProblemDetail problem = createProblem(
                 HttpStatus.BAD_REQUEST,
-                exception.getMessage() != null
-                        ? exception.getMessage()
-                        : "Invalid request."
+                "Validation Failed",
+                "Invalid request. Please provide valid origin and destination branches.",
+                request
         );
-
-        problem.setTitle("Bad Request");
 
         return ResponseEntity.badRequest().body(problem);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpectedException(
-            Exception exception) {
+            Exception exception,
+            HttpServletRequest request) {
 
-        log.error("Unexpected error while processing payment routing",
-                exception);
-
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later."
+        log.error(
+                "Unexpected error while processing request: {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception
         );
 
-        problem.setTitle("Internal Server Error");
+        ProblemDetail problem = createProblem(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "An unexpected error occurred. Please try again later.",
+                request
+        );
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(problem);
     }
 
-        private ProblemDetail createProblem(
-                HttpStatus status,
-                String title,
-                String detail,
-                HttpServletRequest request) {
+    private ProblemDetail createProblem(
+            HttpStatus status,
+            String title,
+            String detail,
+            HttpServletRequest request) {
 
-            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                    status, detail);
+        ProblemDetail problem =
+                ProblemDetail.forStatusAndDetail(status, detail);
 
-            problem.setTitle(title);
-            problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setTitle(title);
+        problem.setInstance(URI.create(request.getRequestURI()));
 
-            return problem;
-        }
+        return problem;
     }
 }

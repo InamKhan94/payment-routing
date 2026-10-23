@@ -5,6 +5,5 @@ uk\jpmorgan\example\paymentrouting\PaymentRoutingApplication.class
 uk\jpmorgan\example\paymentrouting\config\PaymentRoutingProperties.class
 uk\jpmorgan\example\paymentrouting\domain\BranchConfig.class
 uk\jpmorgan\example\paymentrouting\domain\State.class
-uk\jpmorgan\example\paymentrouting\exception\GlobalExceptionHandler$ApiExceptionHandler.class
 uk\jpmorgan\example\paymentrouting\controller\PaymentController.class
 uk\jpmorgan\example\paymentrouting\exception\GlobalExceptionHandler.class

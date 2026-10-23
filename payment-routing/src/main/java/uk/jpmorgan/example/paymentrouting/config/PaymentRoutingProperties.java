@@ -13,7 +13,7 @@ public class PaymentRoutingProperties{
     private Map<String, BranchConfig> branches = new HashMap<>();
 
     public Map<String, BranchConfig> getBranches() {
-        return branches;
+         return branches;
     }
 
     public void setBranches(Map<String, BranchConfig> branches) {
